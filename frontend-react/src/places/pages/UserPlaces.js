@@ -6,7 +6,7 @@ import PlaceList from '../components/PlaceList';
 const DUMMY_PLACES = [
 	{
 		id: 'p1',
-		title: 'Empire State Building',
+		title: 'Emp. State Building',
 		description: 'Ones of the most famous sky scrapers in the world!',
 		imageUrl:
 			'https://cdn.cnn.com/cnnnext/dam/assets/130802044459-skyscrapers-gallery---empire-state-building-super-169.jpg',

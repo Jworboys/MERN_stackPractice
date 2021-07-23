@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 
 import Input from '../../shared/components/FormElements/Input';
 import Button from '../../shared/components/FormElements/Button';
+import Card from '../../shared/components/UIElements/Card';
 import {
 	VALIDATOR_REQUIRE,
 	VALIDATOR_MINLENGTH,
@@ -12,7 +13,7 @@ import './PlaceForm.css';
 const DUMMY_PLACES = [
 	{
 		id: 'p1',
-		title: 'Empire State Building',
+		title: 'Emp. State Building',
 		description: 'Ones of the most famous sky scrapers in the world!',
 		imageUrl:
 			'https://cdn.cnn.com/cnnnext/dam/assets/130802044459-skyscrapers-gallery---empire-state-building-super-169.jpg',
@@ -24,7 +25,7 @@ const DUMMY_PLACES = [
 		creator: 'u1',
 	},
 	{
-		id: '[2',
+		id: 'p2',
 		title: 'Empire State Building',
 		description: 'Ones of the most famous sky scrapers in the world!',
 		imageUrl:
@@ -60,19 +61,22 @@ const UpdatePlace = () => {
 
 	// useEffect is a hook that makes it so the function will not rerender unless a dependency has changed.
 	useEffect(() => {
-		setFormData(
-			{
-				title: {
-					value: identifiedPlace.title,
-					isValid: true,
+		if (identifiedPlace) {
+			setFormData(
+				{
+					title: {
+						value: identifiedPlace.title,
+						isValid: true,
+					},
+					description: {
+						value: identifiedPlace.description,
+						isValid: true,
+					},
 				},
-				description: {
-					value: identifiedPlace.description,
-					isValid: true,
-				},
-			},
-			true
-		);
+				true
+			);
+		}
+
 		setIsLoading(false);
 	}, [setFormData, identifiedPlace]);
 
@@ -84,7 +88,9 @@ const UpdatePlace = () => {
 	if (!identifiedPlace) {
 		return (
 			<div className='center'>
-				<h2>Could not find place!</h2>
+				<Card>
+					<h2>Could not find place!</h2>
+				</Card>
 			</div>
 		);
 	}
@@ -92,7 +98,9 @@ const UpdatePlace = () => {
 	if (isLoading) {
 		return (
 			<div className='center'>
-				<h2>Loading....</h2>
+				<Card>
+					<h2>Loading....</h2>
+				</Card>
 			</div>
 		);
 	}
