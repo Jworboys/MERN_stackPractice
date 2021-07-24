@@ -1,6 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const HttpError = require('../models/http-error');
+const { validationResult } = require('express-validator');
 
 let DUMMY_PLACES = [
 	{
@@ -52,6 +53,11 @@ const getPlacesByUserId = (request, response, next) => {
 };
 
 const createPlace = (request, response, next) => {
+	const error = validationResult(request);
+	if (!error.isEmpty()) {
+		console.log(error);
+		return next(new HttpError('Invalid inputs, please check your data', 422));
+	}
 	// Object destructoring is a shortcut for doing const title = req.body.title; on everything.
 	const { title, description, coordinates, address, creator } = request.body;
 

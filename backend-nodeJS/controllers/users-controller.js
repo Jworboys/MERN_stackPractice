@@ -16,6 +16,17 @@ const getUsers = (req, res, next) => {
 
 const signup = (req, res, next) => {
 	const { name, email, password } = req.body;
+
+	const hasUser = DUMMY_USERS.find(u => u.email === email);
+	if (hasUser) {
+		return next(
+			new HttpError(
+				'Could not create user. User with this email already exists.',
+				422
+			)
+		);
+	}
+
 	const createdUser = {
 		id: uuidv4(),
 		name,
@@ -33,7 +44,7 @@ const login = (req, res, next) => {
 	const identifiedUser = DUMMY_USERS.find(u => u.email === email);
 	if (!identifiedUser || identifiedUser.password !== password) {
 		return next(
-			HttpError('Could not identify user. Invalid credentials.', 401)
+			new HttpError('Could not identify user. Invalid credentials.', 401)
 		);
 	}
 
