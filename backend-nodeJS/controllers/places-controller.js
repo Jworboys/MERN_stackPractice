@@ -1,3 +1,5 @@
+const express = require('express');
+const { v4: uuidv4 } = require('uuid');
 const HttpError = require('../models/http-error');
 
 const DUMMY_PLACES = [
@@ -49,5 +51,27 @@ const getPlaceByUserId = (request, response, next) => {
 	response.json({ place });
 };
 
+const createPlace = (request, response, next) => {
+	// Object destructoring is a shortcut for doing const title = req.body.title; on everything.
+	const { title, description, coordinates, address, creator } = request.body;
+
+	const createPlace = {
+		// If the values have the same name you can just write it once, such as description there.
+		// title could be the same.
+		id: uuidv4(),
+		title: title,
+		description,
+		location: coordinates,
+		address,
+		creator,
+	};
+
+	// push adds to the last element where as unshift(createPlace) -- would add to the start of the array.
+	DUMMY_PLACES.push(createPlace);
+
+	response.status(201).json({ place: createPlace });
+};
+
+exports.createPlace = createPlace;
 exports.getPlaceById = getPlaceById;
 exports.getPlaceByUserId = getPlaceByUserId;
