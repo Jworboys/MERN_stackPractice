@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const HttpError = require('../models/http-error');
 const { validationResult } = require('express-validator');
+const getCoordsForAddress = require('../util/location');
 
 let DUMMY_PLACES = [
 	{
@@ -52,14 +53,21 @@ const getPlacesByUserId = (request, response, next) => {
 	response.json({ places });
 };
 
-const createPlace = (request, response, next) => {
+const createPlace = async (request, response, next) => {
 	const error = validationResult(request);
 	if (!error.isEmpty()) {
 		console.log(error);
 		return next(new HttpError('Invalid inputs, please check your data', 422));
 	}
 	// Object destructoring is a shortcut for doing const title = req.body.title; on everything.
-	const { title, description, coordinates, address, creator } = request.body;
+	const { title, description, address, creator } = request.body;
+
+	let coordinates;
+	try {
+		coordinates = await getCoordsForAddress(address);
+	} catch (error) {
+		return next(error);
+	}
 
 	const createPlace = {
 		// If the values have the same name you can just write it once, such as description there.
@@ -79,6 +87,11 @@ const createPlace = (request, response, next) => {
 };
 
 const updatePlace = (req, res, next) => {
+	const error = validationResult(req);
+	if (!error.isEmpty()) {
+		console.log(error);
+		return next(new HttpError('Invalid inputs, please check your data', 422));
+	}
 	const { title, description } = req.body;
 	const placeId = req.params.pid;
 
@@ -93,6 +106,10 @@ const updatePlace = (req, res, next) => {
 
 const deletePlace = (req, res, next) => {
 	const placeId = req.params.pid;
+	if (!DUMMY_PLACES.filter(p => p.id !== placeId)) {
+		return next(new HttpError('Could not find a place for that Id.', 404));
+	}
+
 	DUMMY_PLACES = DUMMY_PLACES.filter(p => {
 		p.id !== placeId;
 	});
