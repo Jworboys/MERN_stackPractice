@@ -1,23 +1,10 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
 const HttpError = require('../models/http-error');
 const { validationResult } = require('express-validator');
 const getCoordsForAddress = require('../util/location');
 const Place = require('../models/place');
-
-let DUMMY_PLACES = [
-	{
-		id: 'p1',
-		title: 'Empire State Building',
-		description: 'One of the most famous sky scrappers in the world.',
-		location: {
-			lat: 40.7484474,
-			lng: -73.9871516,
-		},
-		address: '20 W 34th St, New York, NY 10001',
-		creator: 'u1',
-	},
-];
+const User = require('../models/user');
+const mongoose = require('mongoose');
 
 // function getPlaceById() { ... }
 // const getPlaceById = function() { ... }
@@ -94,8 +81,25 @@ const createPlace = async (request, response, next) => {
 		creator,
 	});
 
+	let user;
 	try {
-		await createdPlace.save();
+		user = await User.findById(creator);
+	} catch (err) {
+		return next(new HttpError('Creating failed, please try again.', 500));
+	}
+
+	if (!user) {
+		return next(new HttpError('Could not find user for provided Id.', 404));
+	}
+	console.log(createdPlace);
+	try {
+		// This is like a rollback for if any errors occur.
+		const sess = await mongoose.startSession();
+		sess.startTransaction();
+		await createdPlace.save({ session: sess });
+		user.places.push(createdPlace);
+		await user.save({ session: sess });
+		await sess.commitTransaction();
 	} catch (err) {
 		return next(new HttpError('Creating place failed, please try again.', 500));
 	}
@@ -141,15 +145,24 @@ const deletePlace = async (req, res, next) => {
 	let place;
 
 	try {
-		place = await Place.findById(placeId);
+		place = await Place.findById(placeId).populate('creator');
 	} catch (err) {
 		return next(
 			new HttpError('Something went wrong, could not delete place.', 500)
 		);
 	}
 
+	if (!place) {
+		return next(new HttpError('Could not find place for this id.', 404));
+	}
+
 	try {
-		place.remove();
+		const sess = await mongoose.startSession();
+		sess.startTransaction();
+		await place.remove({ session: sess });
+		place.creator.places.pull(place);
+		await place.creator.save({ session: sess });
+		await sess.commitTransaction();
 	} catch (err) {
 		return next(
 			new HttpError('Something went wrong, could not delete place.', 500)
