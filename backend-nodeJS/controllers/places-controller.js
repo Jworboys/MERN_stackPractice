@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const HttpError = require('../models/http-error');
 const { validationResult } = require('express-validator');
 const getCoordsForAddress = require('../util/location');
+const Place = require('../models/place');
 
 let DUMMY_PLACES = [
 	{
@@ -20,13 +21,17 @@ let DUMMY_PLACES = [
 
 // function getPlaceById() { ... }
 // const getPlaceById = function() { ... }
-const getPlaceById = (request, response, next) => {
+const getPlaceById = async (request, response, next) => {
 	const placeId = request.params.pid;
 	// { pid: 'p1' } -- params is an object in which were we can the values from the keys to the desired inputs. -- such as the /:pid in this case.
 
-	const place = DUMMY_PLACES.find(p => {
-		return p.id === placeId;
-	});
+	let place;
+
+	try {
+		place = await Place.findById(placeId);
+	} catch (err) {
+		return next(new HttpError('Could not find place.', 500));
+	}
 
 	if (!place) {
 		// - Make sure to return our the following code block will still run and will try and return another object.
@@ -35,14 +40,20 @@ const getPlaceById = (request, response, next) => {
 		);
 	}
 
-	response.json({ place });
+	response.json({ place: place.toObject({ getters: true }) });
 };
 
-const getPlacesByUserId = (request, response, next) => {
+const getPlacesByUserId = async (request, response, next) => {
 	const userId = request.params.uid;
-	const places = DUMMY_PLACES.filter(p => {
-		return p.creator === userId;
-	});
+
+	let places;
+	try {
+		places = await Place.find({ creator: userId });
+	} catch (err) {
+		return next(
+			new HttpError('Fetching places failed, please try again.', 500)
+		);
+	}
 
 	if (!places || places.length === 0) {
 		return next(
@@ -50,7 +61,9 @@ const getPlacesByUserId = (request, response, next) => {
 		);
 	}
 
-	response.json({ places });
+	response.json({
+		places: places.map(place => place.toObject({ getters: true })),
+	});
 };
 
 const createPlace = async (request, response, next) => {
@@ -69,24 +82,28 @@ const createPlace = async (request, response, next) => {
 		return next(error);
 	}
 
-	const createPlace = {
+	const createdPlace = new Place({
 		// If the values have the same name you can just write it once, such as description there.
 		// title could be the same.
-		id: uuidv4(),
 		title: title,
 		description,
-		location: coordinates,
 		address,
+		location: coordinates,
+		image:
+			'https://marvel-b1-cdn.bc0a.com/f00000000179470/www.esbnyc.com/sites/default/files/styles/on_single_feature/public/2020-02/Green%20lights.jpg?itok=nRbtw3hG',
 		creator,
-	};
+	});
 
-	// push adds to the last element where as unshift(createPlace) -- would add to the start of the array.
-	DUMMY_PLACES.push(createPlace);
+	try {
+		await createdPlace.save();
+	} catch (err) {
+		return next(new HttpError('Creating place failed, please try again.', 500));
+	}
 
-	response.status(201).json({ place: createPlace });
+	response.status(201).json({ place: createdPlace });
 };
 
-const updatePlace = (req, res, next) => {
+const updatePlace = async (req, res, next) => {
 	const error = validationResult(req);
 	if (!error.isEmpty()) {
 		console.log(error);
@@ -95,24 +112,49 @@ const updatePlace = (req, res, next) => {
 	const { title, description } = req.body;
 	const placeId = req.params.pid;
 
-	const updatedPlace = { ...DUMMY_PLACES.find(p => p.id === placeId) };
-	const placeIndex = DUMMY_PLACES.findIndex(p => p.id === placeId);
-	updatedPlace.title = title;
-	updatedPlace.description = description;
-
-	DUMMY_PLACES[placeIndex] = updatedPlace;
-	res.status(200).json({ place: updatedPlace });
-};
-
-const deletePlace = (req, res, next) => {
-	const placeId = req.params.pid;
-	if (!DUMMY_PLACES.filter(p => p.id !== placeId)) {
-		return next(new HttpError('Could not find a place for that Id.', 404));
+	let place;
+	try {
+		place = await Place.findById(placeId);
+	} catch (err) {
+		return next(
+			new HttpError('Something went wrong, could not update place.', 500)
+		);
 	}
 
-	DUMMY_PLACES = DUMMY_PLACES.filter(p => {
-		p.id !== placeId;
-	});
+	place.title = title;
+	place.description = description;
+
+	try {
+		await place.save();
+	} catch (err) {
+		return next(
+			new HttpError('Something went wrong, could not update place.', 500)
+		);
+	}
+
+	// Making it a javascript object and make there be a nother id variable without the _ in front.
+	res.json({ place: place.toObject({ getters: true }) });
+};
+
+const deletePlace = async (req, res, next) => {
+	const placeId = req.params.pid;
+	let place;
+
+	try {
+		place = await Place.findById(placeId);
+	} catch (err) {
+		return next(
+			new HttpError('Something went wrong, could not delete place.', 500)
+		);
+	}
+
+	try {
+		place.remove();
+	} catch (err) {
+		return next(
+			new HttpError('Something went wrong, could not delete place.', 500)
+		);
+	}
 
 	res.status(200).json({ message: 'Place Deleted.' });
 };
