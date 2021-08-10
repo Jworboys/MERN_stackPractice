@@ -9,6 +9,17 @@ const app = express();
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+	// Allows any domains to send requests.
+	res.setHeader('Access-Control-Allow-Origin', '*');
+	res.setHeader(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+	);
+	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
+	next();
+});
+
 // This filter makes it so it doesnt have to be exact but has to atleast start with /api/places...that is because it app.use rather then a get or post... get or post etc.. makes it so it have to be exact.
 app.use('/api/places', placesRoutes); // => /api/places/...
 app.use('/api/users', usersRoutes);
@@ -30,7 +41,9 @@ app.use((error, req, res, next) => {
 });
 
 mongoose
-	.connect('')
+	.connect(
+		'mongodb+srv://Jordan:kvvVGXKl3nCTW61y@cluster0.rq7p2.mongodb.net/mern?retryWrites=true&w=majority'
+	)
 	.then(() => {
 		app.listen(5000);
 	})
