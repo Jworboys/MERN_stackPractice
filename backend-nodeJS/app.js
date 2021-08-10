@@ -42,7 +42,7 @@ app.use((error, req, res, next) => {
 
 mongoose
 	.connect(
-		'mongodb+srv://Jordan:kvvVGXKl3nCTW61y@cluster0.rq7p2.mongodb.net/mern?retryWrites=true&w=majority'
+		''
 	)
 	.then(() => {
 		app.listen(5000);
